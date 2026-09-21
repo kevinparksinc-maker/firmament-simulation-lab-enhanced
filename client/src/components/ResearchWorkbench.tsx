@@ -166,6 +166,46 @@ export function downloadResultBundle(result: any) {
   window.setTimeout(() => downloadFile(`firmament-method-audit-${stamp}.csv`, `${csv}\n`, "text/csv;charset=utf-8"), 120);
 }
 
+function displayWinner(winner: string | null | undefined, result: any) {
+  if (winner === "A") return `${result.input.teamA} (Side A)`;
+  if (winner === "B") return `${result.input.teamB} (Side B)`;
+  if (winner === "TIE" || winner === "TIE") return "Tie";
+  return "Not available";
+}
+
+function displayValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "Not supplied";
+  return String(value);
+}
+
+export function TransparencyPanel({ result }: { result: any }) {
+  const input = result.input;
+  const actual = result.comparison.actualWinner;
+  const frames = [result.godView, result.agentView];
+  const baseRows = [
+    ["Territorial winner", displayWinner(result.baseline.territorial?.winner, result)],
+    ["KP stellar winner", displayWinner(result.baseline.kpStellar?.winner, result)],
+    ["Combined baseline winner", displayWinner(result.baseline.winner, result)],
+    ["Frame agreement state", displayValue(result.comparison.state)],
+    ["Frame agreement winner", displayWinner(result.comparison.winner, result)],
+    ["Actual result", displayWinner(actual, result)],
+    ["Scoring state", result.comparison.verified ? "Verified: HIT/MISS/TIE scoring enabled" : "Prospective: verdicts remain unverified"],
+  ];
+
+  return (
+    <section className="mt-6 panel overflow-hidden">
+      <div className="panel-header"><div><p className="eyebrow text-cyan-200/80">Transparency layer</p><h2 className="section-title">Every input, assumption, and decision</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">This is the complete calculation contract for this run. Nothing below is a confidence estimate or hidden model output; it is the recorded input and the engine’s returned evidence.</p></div><span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100">Audit ready</span></div>
+      <div className="grid gap-4 border-b border-white/[0.07] p-5 xl:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4"><p className="eyebrow">01 / Normalized input</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{[["Event ID", input.id], ["Side A", input.teamA], ["Side B", input.teamB], ["Sport", input.sport], ["Venue", input.location], ["Start time (UTC)", input.startTime], ["Latitude", input.latitude], ["Longitude", input.longitude], ["Actual winner", actual ?? "UNVERIFIED"]].map(([label, value]) => <div key={label} className="rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2"><span className="block text-[9px] uppercase tracking-[0.13em] text-slate-600">{label}</span><strong className="mt-1 block break-words text-[11px] font-medium text-slate-200">{displayValue(value)}</strong></div>)}</div></div>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4"><p className="eyebrow">02 / Engine boundary</p><div className="mt-3 space-y-2">{[["Source", result.engine.source], ["Calculation path", result.engine.calculationPath], ["Fixed-background frame", result.engine.fixedBackground], ["Hamal anchor", result.engine.hamalAnchor], ["AgentView model", input.agentViewModel ?? "astronomical (default)"], ["Sunrise time", input.sunriseTime], ["Sunrise source", input.sunriseSource]].map(([label, value]) => <div key={label} className="grid gap-1 rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2 sm:grid-cols-[155px_1fr]"><span className="text-[9px] uppercase tracking-[0.13em] text-slate-600">{label}</span><strong className="break-words text-[11px] font-medium text-slate-200">{displayValue(value)}</strong></div>)}</div></div>
+      </div>
+      <div className="border-b border-white/[0.07] p-5"><p className="eyebrow">03 / Decision trace</p><p className="mt-1 text-xs text-slate-500">Baseline and agreement fields are shown exactly as returned. A method winner is the side with the higher raw score; equal scores produce a tie. HIT/MISS is only computed when an actual result is supplied.</p><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{baseRows.map(([label, value]) => <div key={label} className="rounded-lg border border-white/[0.06] bg-black/10 px-3 py-2"><span className="block text-[9px] uppercase tracking-[0.13em] text-slate-600">{label}</span><strong className="mt-1 block text-[11px] font-medium text-slate-200">{value}</strong></div>)}</div></div>
+      <div className="border-b border-white/[0.07] p-5"><p className="eyebrow">04 / Frame assumptions and returned synthesis</p><div className="mt-3 grid gap-4 lg:grid-cols-2">{frames.map((frame: any) => <div key={frame.name} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-white">{frame.name}</p><p className="mt-1 text-[10px] text-slate-500">{frame.coordinateFrame}</p></div><span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] uppercase tracking-[0.12em] text-slate-300">{displayWinner(frame.synthesis.winner, result)}</span></div><div className="mt-3 space-y-2 text-[11px]">{[["House rule", frame.houseRule], ["Ascendant model", frame.ascendantModel], ["Ascendant longitude", `${displayValue(frame.ascendantLongitude)}°`], ["Sunrise time", frame.sunriseTime], ["Sunrise source", frame.sunriseSource], ["Returned synthesis verdict", frame.synthesis.verdict]].map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0"><span className="text-slate-600">{label}</span><strong className="max-w-[62%] text-right font-medium text-slate-300">{displayValue(value)}</strong></div>)}</div></div>)}</div></div>
+      <details className="group p-5"><summary className="cursor-pointer list-none text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/80">05 / Show raw engine payload <span className="ml-2 text-slate-600 group-open:hidden">(expand)</span><span className="ml-2 hidden text-slate-600 group-open:inline">(collapse)</span></summary><pre className="mt-4 max-h-[520px] overflow-auto rounded-xl border border-white/[0.07] bg-[#050b14] p-4 text-[10px] leading-5 text-slate-400">{JSON.stringify(result, null, 2)}</pre></details>
+    </section>
+  );
+}
+
 export function MethodExplorer({ result }: { result: any }) {
   const [frame, setFrame] = useState<"all" | "God View" | "AgentView">("all");
   const [verdict, setVerdict] = useState("all");
