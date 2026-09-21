@@ -1,0 +1,208 @@
+import { useMemo, useState } from "react";
+import {
+  CalendarClock,
+  ChevronDown,
+  Download,
+  FileChartColumn,
+  Filter,
+  Play,
+  RefreshCw,
+  X,
+} from "lucide-react";
+
+type Sport = "MLB" | "NBA" | "NFL" | "boxing";
+type Winner = "A" | "B" | "TIE";
+
+export type FixtureInput = {
+  id?: string;
+  teamA: string;
+  teamB: string;
+  sport: Sport;
+  location: string;
+  latitude?: number;
+  longitude?: number;
+  startTime: string;
+  actualWinner?: Winner;
+  agentViewModel?: "astronomical" | "fixed-earth-dawn-anchored";
+  sunriseTime?: string;
+  sunriseSource?: string;
+};
+
+type ManualFixtureDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  onRun: (input: FixtureInput) => Promise<void>;
+  isRunning: boolean;
+};
+
+const initialFixture = {
+  teamA: "",
+  teamB: "",
+  sport: "MLB" as Sport,
+  location: "",
+  latitude: "",
+  longitude: "",
+  startTime: "",
+  actualWinner: "unverified",
+};
+
+export function ManualFixtureDialog({ open, onClose, onRun, isRunning }: ManualFixtureDialogProps) {
+  const [fixture, setFixture] = useState(initialFixture);
+  const [error, setError] = useState("");
+
+  if (!open) return null;
+
+  const update = (field: keyof typeof initialFixture, value: string) => {
+    setFixture((current) => ({ ...current, [field]: value }));
+    setError("");
+  };
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const latitude = fixture.latitude.trim() === "" ? undefined : Number(fixture.latitude);
+    const longitude = fixture.longitude.trim() === "" ? undefined : Number(fixture.longitude);
+
+    if (!fixture.teamA.trim() || !fixture.teamB.trim() || !fixture.location.trim() || !fixture.startTime) {
+      setError("Teams, venue, and start time are required.");
+      return;
+    }
+    if ((latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) || (longitude !== undefined && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))) {
+      setError("Enter valid coordinates, or leave both coordinate fields blank.");
+      return;
+    }
+
+    await onRun({
+      id: `manual-${crypto.randomUUID()}`,
+      teamA: fixture.teamA.trim(),
+      teamB: fixture.teamB.trim(),
+      sport: fixture.sport,
+      location: fixture.location.trim(),
+      latitude,
+      longitude,
+      startTime: new Date(fixture.startTime).toISOString(),
+      ...(fixture.actualWinner === "unverified" ? {} : { actualWinner: fixture.actualWinner as Winner }),
+    });
+    setFixture(initialFixture);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#020711]/80 p-4 backdrop-blur-sm sm:items-center">
+      <div className="my-6 w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#0b1628] shadow-2xl">
+        <div className="flex items-start justify-between border-b border-white/[0.08] px-5 py-4 sm:px-6">
+          <div>
+            <p className="eyebrow text-cyan-200/80">New research fixture</p>
+            <h2 className="mt-1 font-display text-2xl text-white">Run a single event</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Use a historical result to score evidence, or leave it unverified for a prospective research record.</p>
+          </div>
+          <button type="button" onClick={onClose} className="icon-button" aria-label="Close manual fixture dialog"><X size={16} /></button>
+        </div>
+        <form onSubmit={submit} className="p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5 text-xs text-slate-300">Side A / home or first competitor<input required value={fixture.teamA} onChange={(event) => update("teamA", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="e.g., New York Yankees" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300">Side B / away or second competitor<input required value={fixture.teamB} onChange={(event) => update("teamB", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="e.g., Houston Astros" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300">Sport<select value={fixture.sport} onChange={(event) => update("sport", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60"><option value="MLB">MLB</option><option value="NFL">NFL</option><option value="NBA">NBA</option><option value="boxing">Boxing</option></select></label>
+            <label className="space-y-1.5 text-xs text-slate-300">Verified winner (optional)<select value={fixture.actualWinner} onChange={(event) => update("actualWinner", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60"><option value="unverified">No result yet</option><option value="A">Side A</option><option value="B">Side B</option><option value="TIE">Tie</option></select></label>
+            <label className="space-y-1.5 text-xs text-slate-300 sm:col-span-2">Venue / location<input required value={fixture.location} onChange={(event) => update("location", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="City, state or venue" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300 sm:col-span-2">Start time (local)<input required type="datetime-local" value={fixture.startTime} onChange={(event) => update("startTime", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300">Latitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.latitude} onChange={(event) => update("latitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="29.7604" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300">Longitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.longitude} onChange={(event) => update("longitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="-95.3698" /></label>
+          </div>
+          {error && <p className="mt-4 rounded-lg border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs text-rose-100">{error}</p>}
+          <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-white/[0.08] pt-4"><button type="button" onClick={onClose} className="button-secondary">Cancel</button><button type="submit" disabled={isRunning} className="button-primary"><Play size={14} fill="currentColor" /> {isRunning ? "Calculating…" : "Run fixture"}</button></div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+type ResultLayer = {
+  name: string;
+  verdict: string;
+  winner: string;
+  scoreA: number;
+  scoreB: number;
+  detail: string;
+  source?: string;
+  frame: "God View" | "AgentView";
+};
+
+function resultLayers(result: any): ResultLayer[] {
+  return [
+    ...result.godView.allLayers.map((layer: Omit<ResultLayer, "frame">) => ({ ...layer, frame: "God View" as const })),
+    ...result.agentView.allLayers.map((layer: Omit<ResultLayer, "frame">) => ({ ...layer, frame: "AgentView" as const })),
+  ];
+}
+
+const verdictStyle: Record<string, string> = {
+  hit: "border-emerald-300/20 bg-emerald-300/[0.09] text-emerald-100",
+  miss: "border-rose-300/20 bg-rose-300/[0.09] text-rose-100",
+  tie: "border-amber-300/20 bg-amber-300/[0.09] text-amber-100",
+  unverified: "border-slate-300/15 bg-slate-300/[0.06] text-slate-300",
+};
+
+function downloadFile(filename: string, content: string, mime: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: mime }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 250);
+}
+
+function csvCell(value: unknown) {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function downloadResultBundle(result: any) {
+  const stamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+  const layers = resultLayers(result);
+  const csv = [
+    ["event_id", "frame", "method", "verdict", "prediction", "score_a", "score_b", "detail"].join(","),
+    ...layers.map((layer) => [result.id, layer.frame, layer.name, layer.verdict, layer.winner, layer.scoreA, layer.scoreB, layer.detail].map(csvCell).join(",")),
+  ].join("\n");
+  downloadFile(`firmament-event-${stamp}.json`, `${JSON.stringify(result, null, 2)}\n`, "application/json");
+  window.setTimeout(() => downloadFile(`firmament-method-audit-${stamp}.csv`, `${csv}\n`, "text/csv;charset=utf-8"), 120);
+}
+
+export function MethodExplorer({ result }: { result: any }) {
+  const [frame, setFrame] = useState<"all" | "God View" | "AgentView">("all");
+  const [verdict, setVerdict] = useState("all");
+  const [sort, setSort] = useState<"method" | "evidence">("evidence");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const layers = useMemo(() => resultLayers(result), [result]);
+  const visibleLayers = useMemo(() => layers
+    .filter((layer) => frame === "all" || layer.frame === frame)
+    .filter((layer) => verdict === "all" || layer.verdict === verdict)
+    .sort((a, b) => sort === "method" ? a.name.localeCompare(b.name) : (b.scoreA + b.scoreB) - (a.scoreA + a.scoreB) || a.name.localeCompare(b.name)), [frame, layers, sort, verdict]);
+
+  return (
+    <section className="mt-6 panel overflow-hidden">
+      <div className="panel-header gap-4"><div><p className="eyebrow">Evidence navigator</p><h2 className="section-title">Method-level inspection</h2><p className="mt-1 text-xs text-slate-500">Filter all {layers.length} frame-method evaluations and expand a row for its recorded explanation.</p></div><button onClick={() => downloadResultBundle(result)} className="button-secondary shrink-0"><Download size={14} /> Download audit</button></div>
+      <div className="grid gap-3 border-y border-white/[0.07] px-5 py-4 md:grid-cols-3">
+        <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Frame<select value={frame} onChange={(event) => setFrame(event.target.value as typeof frame)} className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs normal-case tracking-normal text-slate-200 outline-none"><option value="all">All frames</option><option value="God View">God View</option><option value="AgentView">AgentView</option></select></label>
+        <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Result<select value={verdict} onChange={(event) => setVerdict(event.target.value)} className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs normal-case tracking-normal text-slate-200 outline-none"><option value="all">Every status</option><option value="hit">Hits</option><option value="miss">Misses</option><option value="tie">Ties</option><option value="unverified">Not evaluable</option></select></label>
+        <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Sort<select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs normal-case tracking-normal text-slate-200 outline-none"><option value="evidence">Evidence magnitude</option><option value="method">Method name</option></select></label>
+      </div>
+      <div className="divide-y divide-white/[0.06]">
+        {visibleLayers.map((layer) => {
+          const key = `${layer.frame}-${layer.name}`;
+          const isExpanded = expanded === key;
+          return <div key={key} className="px-5 py-3.5"><button onClick={() => setExpanded(isExpanded ? null : key)} className="flex w-full items-center gap-3 text-left"><span className={`min-w-[4.5rem] rounded-full border px-2 py-1 text-center text-[9px] font-bold uppercase tracking-[0.12em] ${verdictStyle[layer.verdict] ?? verdictStyle.unverified}`}>{layer.verdict === "unverified" ? "pending" : layer.verdict}</span><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-slate-200">{layer.name}</p><p className="mt-0.5 text-[10px] text-slate-500">{layer.frame} · Side {layer.winner} · A {layer.scoreA.toFixed(1)} / B {layer.scoreB.toFixed(1)}</p></div><ChevronDown size={16} className={`shrink-0 text-slate-500 transition ${isExpanded ? "rotate-180" : ""}`} /></button>{isExpanded && <div className="ml-[5.25rem] mt-3 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3 text-xs leading-5 text-slate-400"><p>{layer.detail || "The engine did not return a narrative explanation for this evaluation."}</p>{layer.source && <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-slate-600">Source · {layer.source}</p>}</div>}</div>;
+        })}
+        {!visibleLayers.length && <div className="px-5 py-10 text-center text-xs text-slate-500"><Filter className="mx-auto mb-2" size={18} />No methods match these filters.</div>}
+      </div>
+    </section>
+  );
+}
+
+export function RunHistoryPanel({ runs, isLoading, onRefresh }: { runs: any[] | undefined; isLoading: boolean; onRefresh: () => void }) {
+  return (
+    <section className="mt-6 panel overflow-hidden"><div className="panel-header"><div><p className="eyebrow">Persisted runs</p><h2 className="section-title">Recent batch history</h2><p className="mt-1 text-xs text-slate-500">Batch replay status is stored with the source data and refreshed independently of the active run.</p></div><button onClick={onRefresh} className="icon-button" aria-label="Refresh batch history"><RefreshCw size={15} className={isLoading ? "animate-spin" : ""} /></button></div><div className="divide-y divide-white/[0.06]">{isLoading && <div className="px-5 py-5 text-xs text-slate-500">Loading persisted runs…</div>}{!isLoading && !runs?.length && <div className="px-5 py-7 text-center"><CalendarClock className="mx-auto text-slate-600" size={20} /><p className="mt-2 text-xs text-slate-500">No persisted batch runs yet. Import a CSV and start a replay to create the first record.</p></div>}{runs?.map((run) => { const processed = run.completedEvents + run.failedEvents; const percent = run.totalEvents ? Math.round((processed / run.totalEvents) * 100) : 0; return <div key={run.id} className="px-5 py-3.5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-slate-200">Run #{run.id} <span className="font-normal text-slate-500">· Dataset #{run.datasetId}</span></p><p className="mt-1 text-[10px] text-slate-500">{run.createdAt ? new Date(run.createdAt).toLocaleString() : "Timestamp unavailable"}</p></div><span className={`rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.13em] ${run.status === "complete" ? "border-emerald-300/20 bg-emerald-300/[0.08] text-emerald-200" : run.status === "failed" ? "border-rose-300/20 bg-rose-300/[0.08] text-rose-200" : "border-amber-300/20 bg-amber-300/[0.08] text-amber-200"}`}>{run.status}</span></div><div className="mt-3 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-violet-300" style={{ width: `${percent}%` }} /></div><span className="text-[10px] text-slate-500">{processed}/{run.totalEvents}</span></div></div>; })}</div></section>
+  );
+}
+
+export function ResearchWorkspaceHeader({ onNewFixture }: { onNewFixture: () => void }) {
+  return <button onClick={onNewFixture} className="button-primary"><FileChartColumn size={15} /> New fixture</button>;
+}
