@@ -1,6 +1,8 @@
 import {
   generateFixedJ2000KPPrediction,
+  generateFixedJ2000PlanetReadings,
   generatePredictionForModel,
+  kpDetailsFromCanonicalLongitude,
   runFullPackageDualFrameChallenger,
   type AgentViewRotationMode,
   type GameInput,
@@ -93,6 +95,47 @@ function chartSnapshot(prediction: ReturnType<typeof generateFixedJ2000KPPredict
   };
 }
 
+function fixedGodChartSnapshot(prediction: ReturnType<typeof generateFixedJ2000KPPrediction>, startTime: Date) {
+  const planets = generateFixedJ2000PlanetReadings(startTime);
+  const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+  const houses = Array.from({ length: 12 }, (_, index) => {
+    const house = index + 1;
+    const cuspLongitude = index * 30;
+    const stellar = kpDetailsFromCanonicalLongitude(cuspLongitude, startTime, false);
+    const subLordPlacement = planets.find((planet) => planet.planet === stellar.subLord);
+    return {
+      house,
+      cluster: prediction.houses[index]?.cluster ?? "neutral",
+      cuspLongitude,
+      sign: signs[index],
+      starLord: stellar.starLord,
+      subLord: stellar.subLord,
+      subLordHouse: subLordPlacement?.house ?? null,
+      subLordAllegiance: prediction.houses[index]?.subLordAllegiance ?? "neutral",
+    };
+  });
+  return {
+    domeModel: "fixed-j2000-kp",
+    venue: "permanent fixed background",
+    ascendantLongitude: 0,
+    localSiderealTime: 0,
+    houses,
+    planets: planets.map((planet) => ({
+      planet: planet.planet,
+      tropicalLongitude: Number(planet.tropicalLongitude.toFixed(4)),
+      fixedBackgroundLongitude: Number(planet.fixedJ2000EclipticLongitude.toFixed(4)),
+      house: planet.firmamentHouse,
+      sign: planet.sign,
+      degreeInHouse: Number(planet.firmamentDegreeInHouse.toFixed(4)),
+      nakshatra: planet.nakshatra,
+      pada: planet.pada,
+      starLord: planet.starLord,
+      subLord: planet.subLord,
+      isRetrograde: planet.isRetrograde,
+    })),
+  };
+}
+
 function frameReport(
   frame: ReturnType<typeof runFullPackageDualFrameChallenger>["god"],
   actualWinner?: Winner,
@@ -158,7 +201,7 @@ export function runSimulationEvent(input: SimulationEventInput) {
       hamalAnchor: "13° Aries (configuration boundary; engine adapter does not silently alter formulas)",
     },
     chart: {
-      godView: chartSnapshot(activePrediction),
+      godView: fixedGodChartSnapshot(activePrediction, startTime),
       agentView: chartSnapshot(agentPrediction as ReturnType<typeof generateFixedJ2000KPPrediction>),
     },
     baseline: {
