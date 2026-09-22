@@ -2,6 +2,7 @@ import {
   generateFixedJ2000KPPrediction,
   generateFixedJ2000PlanetReadings,
   generatePredictionForModel,
+  fixedEclipticHouseFromLongitude,
   kpDetailsFromCanonicalLongitude,
   runFullPackageDualFrameChallenger,
   type AgentViewRotationMode,
@@ -136,6 +137,50 @@ function fixedGodChartSnapshot(prediction: ReturnType<typeof generateFixedJ2000K
   };
 }
 
+function dawnAgentChartSnapshot(prediction: ReturnType<typeof generateFixedJ2000KPPrediction>, ascendantLongitude: number, startTime: Date) {
+  const ascendantSignStart = Math.floor(ascendantLongitude / 30) * 30;
+  const planets = prediction.planets.map((planet) => {
+    const local = fixedEclipticHouseFromLongitude(planet.ofDateEclipticLongitude - ascendantSignStart);
+    return { ...planet, house: local.house, degreeInHouse: local.degreeInHouse, sign: planet.sign };
+  });
+  const houses = Array.from({ length: 12 }, (_, index) => {
+    const house = index + 1;
+    const cuspLongitude = (ascendantSignStart + index * 30) % 360;
+    const stellar = kpDetailsFromCanonicalLongitude(cuspLongitude, startTime, true);
+    const subLordPlacement = planets.find((planet) => planet.planet === stellar.subLord);
+    return {
+      house,
+      cluster: prediction.houses[index]?.cluster ?? "neutral",
+      cuspLongitude,
+      sign: fixedEclipticHouseFromLongitude(cuspLongitude).sign,
+      starLord: stellar.starLord,
+      subLord: stellar.subLord,
+      subLordHouse: subLordPlacement?.house ?? null,
+      subLordAllegiance: prediction.houses[index]?.subLordAllegiance ?? "neutral",
+    };
+  });
+  return {
+    domeModel: "fixed-earth-dawn-anchored",
+    venue: prediction.venue,
+    ascendantLongitude,
+    localSiderealTime: prediction.localSiderealTime,
+    houses,
+    planets: planets.map((planet) => ({
+      planet: planet.planet,
+      tropicalLongitude: Number(planet.tropicalLongitude.toFixed(4)),
+      fixedBackgroundLongitude: Number(planet.fixedJ2000EclipticLongitude.toFixed(4)),
+      house: planet.house,
+      sign: planet.sign,
+      degreeInHouse: Number(planet.degreeInHouse.toFixed(4)),
+      nakshatra: planet.nakshatra,
+      pada: planet.pada,
+      starLord: planet.starLord,
+      subLord: planet.subLord,
+      isRetrograde: planet.isRetrograde,
+    })),
+  };
+}
+
 function frameReport(
   frame: ReturnType<typeof runFullPackageDualFrameChallenger>["god"],
   actualWinner?: Winner,
@@ -202,7 +247,9 @@ export function runSimulationEvent(input: SimulationEventInput) {
     },
     chart: {
       godView: fixedGodChartSnapshot(activePrediction, startTime),
-      agentView: chartSnapshot(agentPrediction as ReturnType<typeof generateFixedJ2000KPPrediction>),
+      agentView: input.agentViewModel === "fixed-earth-dawn-anchored"
+        ? dawnAgentChartSnapshot(agentPrediction as ReturnType<typeof generateFixedJ2000KPPrediction>, dualFrame.agent.ascendantLongitude, startTime)
+        : chartSnapshot(agentPrediction as ReturnType<typeof generateFixedJ2000KPPrediction>),
     },
     baseline: {
       territorial: activePrediction.territorial,
