@@ -188,6 +188,14 @@ function frameReport(
   const foundation = frame.foundation.layers.map((layer) => layerFromEvidence(layer, actualWinner));
   const added = frame.addedLayers.map((layer) => layerFromEvidence(layer, actualWinner));
   const allLayers = [...foundation, ...added];
+  const ascendantHouses = [1, 2, 3, 6, 10, 11];
+  const descendantHouses = [4, 5, 7, 8, 9, 12];
+  const decisionTrace = [
+    `Role assignment: Side A = Ascendant territory in H${ascendantHouses.join(", H")}; Side B = Descendant territory in H${descendantHouses.join(", H")}.`,
+    `Frame rule: ${frame.houseRule}; coordinate frame: ${frame.coordinateFrame}; ascendant model: ${frame.ascendantModel}.`,
+    ...allLayers.map((layer) => `${layer.name}: raw score A ${layer.scoreA.toFixed(3)} vs B ${layer.scoreB.toFixed(3)} → ${layer.winner === "A" ? "Side A / Ascendant" : layer.winner === "B" ? "Side B / Descendant" : "Tie"}. Recorded evidence: ${layer.detail}`),
+    `Synthesis: foundation A ${frame.foundation.scoreA.toFixed(3)} + extensions = A ${frame.synthesis.scoreA.toFixed(3)}; foundation B ${frame.foundation.scoreB.toFixed(3)} + extensions = B ${frame.synthesis.scoreB.toFixed(3)}; margin ${frame.synthesis.margin.toFixed(3)} → ${frame.synthesis.winner === "A" ? "Side A / Ascendant" : frame.synthesis.winner === "B" ? "Side B / Descendant" : "Tie"}.`,
+  ];
   return {
     name: frame.name,
     coordinateFrame: frame.coordinateFrame,
@@ -203,6 +211,16 @@ function frameReport(
     foundation,
     added,
     allLayers,
+    proof: {
+      roleAssignment: {
+        sideA: "Ascendant",
+        sideB: "Descendant",
+        ascendantHouses,
+        descendantHouses,
+      },
+      scoreFormula: frame.synthesis.formula,
+      decisionTrace,
+    },
     summary: {
       hits: allLayers.filter((layer) => layer.verdict === "hit").length,
       misses: allLayers.filter((layer) => layer.verdict === "miss").length,
