@@ -9,6 +9,7 @@ import { parseSimulationCsv } from "./simulationData";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { listScheduledGames } from "./schedules";
+import { invokeLLM } from "./_core/llm";
 
 const eventInput = z.object({
   id: z.string().optional(),
@@ -64,6 +65,18 @@ export const appRouter = router({
         invalidPreview: parsed.invalid.slice(0, 25),
         status: parsed.invalid.length > 0 ? "partial" as const : "validated" as const,
       };
+    }),
+  }),
+  ai: router({
+    chat: publicProcedure.input(z.object({ messages: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string().min(1).max(6000) })).min(1).max(20), context: z.string().max(12000).optional() })).mutation(async ({ input }) => {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: `You are the Firmament research assistant. Explain the app's recorded inputs, market data, chart frames, and audit statuses clearly. Never invent missing data. Distinguish unverified (no confirmed actual result) from not evaluable (a method could not be scored). Do not present astrology calculations as guaranteed predictions or betting advice.${input.context ? `\n\nCurrent result context:\n${input.context}` : ""}` },
+          ...input.messages,
+        ],
+      });
+      const content = response.choices?.[0]?.message?.content;
+      return { content: typeof content === "string" ? content : "I could not produce a response from the available research record." };
     }),
   }),
   schedules: router({
