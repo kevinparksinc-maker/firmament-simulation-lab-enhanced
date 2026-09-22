@@ -8,6 +8,7 @@ import { createSimulationDataset, createSimulationRun, getSimulationEvents, getS
 import { parseSimulationCsv } from "./simulationData";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { listScheduledGames } from "./schedules";
 
 const eventInput = z.object({
   id: z.string().optional(),
@@ -64,6 +65,9 @@ export const appRouter = router({
         status: parsed.invalid.length > 0 ? "partial" as const : "validated" as const,
       };
     }),
+  }),
+  schedules: router({
+    list: publicProcedure.input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), sport: z.enum(["ALL", "MLB", "NBA", "NFL"]).default("ALL") })).query(({ input }) => listScheduledGames(input.date, input.sport)),
   }),
   runs: router({
     list: publicProcedure.input(z.object({ limit: z.number().int().min(1).max(50).default(8) }).optional()).query(({ input }) => listSimulationRuns(input?.limit ?? 8)),
