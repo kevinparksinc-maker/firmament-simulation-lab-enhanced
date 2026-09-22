@@ -46,14 +46,37 @@ const initialFixture = {
   actualWinner: "unverified",
 };
 
+const venueCoordinates: Record<string, { latitude: string; longitude: string }> = {
+  "tokyo dome": { latitude: "35.7056", longitude: "139.7519" },
+  "oriole park at camden yards": { latitude: "39.2839", longitude: "-76.6217" },
+  "yankee stadium": { latitude: "40.8296", longitude: "-73.9262" },
+  "fenway park": { latitude: "42.3467", longitude: "-71.0972" },
+  "dodger stadium": { latitude: "34.0739", longitude: "-118.2400" },
+};
+
+function lookupVenue(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return venueCoordinates[normalized] ?? Object.entries(venueCoordinates).find(([name]) => normalized.includes(name))?.[1];
+}
+
 export function ManualFixtureDialog({ open, onClose, onRun, isRunning }: ManualFixtureDialogProps) {
   const [fixture, setFixture] = useState(initialFixture);
   const [error, setError] = useState("");
+  const [venueWasResolved, setVenueWasResolved] = useState(false);
 
   if (!open) return null;
 
   const update = (field: keyof typeof initialFixture, value: string) => {
     setFixture((current) => ({ ...current, [field]: value }));
+    if (field === "location") {
+      const venue = lookupVenue(value);
+      if (venue) {
+        setFixture((current) => ({ ...current, location: value, latitude: venue.latitude, longitude: venue.longitude }));
+        setVenueWasResolved(true);
+      } else {
+        setVenueWasResolved(false);
+      }
+    }
     setError("");
   };
 
@@ -83,6 +106,7 @@ export function ManualFixtureDialog({ open, onClose, onRun, isRunning }: ManualF
       ...(fixture.actualWinner === "unverified" ? {} : { actualWinner: fixture.actualWinner as Winner }),
     });
     setFixture(initialFixture);
+    setVenueWasResolved(false);
     onClose();
   };
 
@@ -103,10 +127,9 @@ export function ManualFixtureDialog({ open, onClose, onRun, isRunning }: ManualF
             <label className="space-y-1.5 text-xs text-slate-300">Side B / away or second competitor<input required value={fixture.teamB} onChange={(event) => update("teamB", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="e.g., Houston Astros" /></label>
             <label className="space-y-1.5 text-xs text-slate-300">Sport<select value={fixture.sport} onChange={(event) => update("sport", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60"><option value="MLB">MLB</option><option value="NFL">NFL</option><option value="NBA">NBA</option><option value="boxing">Boxing</option></select></label>
             <label className="space-y-1.5 text-xs text-slate-300">Verified winner (optional)<select value={fixture.actualWinner} onChange={(event) => update("actualWinner", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60"><option value="unverified">No result yet</option><option value="A">Side A</option><option value="B">Side B</option><option value="TIE">Tie</option></select></label>
-            <label className="space-y-1.5 text-xs text-slate-300 sm:col-span-2">Venue / location<input required value={fixture.location} onChange={(event) => update("location", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="City, state or venue" /></label>
+            <label className="space-y-1.5 text-xs text-slate-300 sm:col-span-2">Venue / location<input required list="known-venues" value={fixture.location} onChange={(event) => update("location", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="Start typing a venue (e.g., Tokyo Dome)" /><datalist id="known-venues"><option value="Tokyo Dome" /><option value="Oriole Park at Camden Yards" /><option value="Yankee Stadium" /><option value="Fenway Park" /><option value="Dodger Stadium" /></datalist>{venueWasResolved ? <span className="mt-1 block text-[10px] text-emerald-200">Venue recognized — coordinates filled automatically.</span> : <span className="mt-1 block text-[10px] text-slate-600">Coordinates are looked up automatically for recognized venues.</span>}</label>
             <label className="space-y-1.5 text-xs text-slate-300 sm:col-span-2">Start time (local)<input required type="datetime-local" value={fixture.startTime} onChange={(event) => update("startTime", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" /></label>
-            <label className="space-y-1.5 text-xs text-slate-300">Latitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.latitude} onChange={(event) => update("latitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="29.7604" /></label>
-            <label className="space-y-1.5 text-xs text-slate-300">Longitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.longitude} onChange={(event) => update("longitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="-95.3698" /></label>
+            <details className="sm:col-span-2"><summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Advanced coordinate override</summary><div className="mt-3 grid gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-xs text-slate-300">Latitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.latitude} onChange={(event) => update("latitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="Auto-filled from venue" /></label><label className="space-y-1.5 text-xs text-slate-300">Longitude <span className="text-slate-600">optional</span><input inputMode="decimal" value={fixture.longitude} onChange={(event) => update("longitude", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300/60" placeholder="Auto-filled from venue" /></label></div></details>
           </div>
           {error && <p className="mt-4 rounded-lg border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs text-rose-100">{error}</p>}
           <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-white/[0.08] pt-4"><button type="button" onClick={onClose} className="button-secondary">Cancel</button><button type="submit" disabled={isRunning} className="button-primary"><Play size={14} fill="currentColor" /> {isRunning ? "Calculating…" : "Run fixture"}</button></div>
