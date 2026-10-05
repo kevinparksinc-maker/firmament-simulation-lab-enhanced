@@ -22,11 +22,15 @@ export async function executeSimulationRun(runId: number, datasetId: number) {
   }
 
   const verified = results.filter((result) => result.comparison.verified);
+  const synthesisHits = verified.filter((result) => result.synthesis.verdict === "hit").length;
   const baselineHits = verified.filter((result) => result.baseline.verdict === "hit").length;
   const summary = {
     total: results.length,
     verified: verified.length,
     unverified: results.length - verified.length,
+    synthesisHits,
+    synthesisMisses: verified.length - synthesisHits,
+    synthesisAccuracy: verified.length ? Number(((synthesisHits / verified.length) * 100).toFixed(1)) : null,
     baselineHits,
     baselineMisses: verified.length - baselineHits,
     baselineAccuracy: verified.length ? Number(((baselineHits / verified.length) * 100).toFixed(1)) : null,

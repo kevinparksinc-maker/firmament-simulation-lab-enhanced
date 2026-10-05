@@ -294,6 +294,10 @@ export function runSimulationEvent(input: SimulationEventInput) {
     },
     godView: frameReport(dualFrame.god, actualWinner),
     agentView: frameReport(dualFrame.agent, actualWinner),
+    synthesis: {
+      ...dualFrame.synthesis,
+      verdict: verdictFor(dualFrame.synthesis.winner, actualWinner),
+    },
     comparison: {
       state: dualFrame.agreement.state,
       winner: dualFrame.agreement.winner,
@@ -306,6 +310,7 @@ export function runSimulationEvent(input: SimulationEventInput) {
 export function runSimulationBatch(events: SimulationEventInput[]) {
   const results = events.map((event) => runSimulationEvent(event));
   const verified = results.filter((result) => result.comparison.verified);
+  const synthesisHits = verified.filter((result) => result.synthesis.verdict === "hit").length;
   const hits = verified.filter((result) => result.baseline.verdict === "hit").length;
   return {
     results,
@@ -313,6 +318,9 @@ export function runSimulationBatch(events: SimulationEventInput[]) {
       total: results.length,
       verified: verified.length,
       unverified: results.length - verified.length,
+      synthesisHits,
+      synthesisMisses: verified.length - synthesisHits,
+      synthesisAccuracy: verified.length ? Number(((synthesisHits / verified.length) * 100).toFixed(1)) : null,
       baselineHits: hits,
       baselineMisses: verified.length - hits,
       baselineAccuracy: verified.length ? Number(((hits / verified.length) * 100).toFixed(1)) : null,

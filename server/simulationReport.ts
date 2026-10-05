@@ -44,6 +44,10 @@ export type SimulationReport = {
     location: string;
     startTime: string;
     finalSimulatedResult: string;
+    protocolVersion: string;
+    mappingVersion: string;
+    synthesisState: string;
+    synthesisVerdict: string;
     baselineVerdict: string;
     godView: { hits: number; misses: number; notEvaluable: number; total: number; hitRate: number; evaluableHitRate: number; methods: MethodGameRow[] };
     agentView: { hits: number; misses: number; notEvaluable: number; total: number; hitRate: number; evaluableHitRate: number; methods: MethodGameRow[] };
@@ -131,7 +135,11 @@ export function buildSimulationReport(results: SimulationResult[]): SimulationRe
       sport: result.input.sport,
       location: result.input.location,
       startTime: result.input.startTime,
-      finalSimulatedResult: result.baseline.winner === "A" ? result.input.teamA : result.baseline.winner === "B" ? result.input.teamB : "No clear winner",
+      finalSimulatedResult: result.synthesis.winner === "A" ? result.input.teamA : result.synthesis.winner === "B" ? result.input.teamB : "No clear winner",
+      protocolVersion: result.synthesis.protocolVersion,
+      mappingVersion: result.synthesis.mappingVersion,
+      synthesisState: result.synthesis.translation.state,
+      synthesisVerdict: result.synthesis.verdict,
       baselineVerdict: result.baseline.verdict,
       godView: { hits: godHits, misses: godMisses, notEvaluable: godNotEvaluable, total: godMethods.length, hitRate: round((godHits / Math.max(godMethods.length, 1)) * 100), evaluableHitRate: round((godHits / Math.max(godHits + godMisses, 1)) * 100), methods: godMethods },
       agentView: { hits: agentHits, misses: agentMisses, notEvaluable: agentNotEvaluable, total: agentMethods.length, hitRate: round((agentHits / Math.max(agentMethods.length, 1)) * 100), evaluableHitRate: round((agentHits / Math.max(agentHits + agentMisses, 1)) * 100), methods: agentMethods },
@@ -196,7 +204,8 @@ export function formatSimulationReport(report: SimulationReport) {
   for (const game of report.games) {
     lines.push(`=== GAME ${game.gameNumber}: ${game.matchup} ===`);
     lines.push(`Game ID: ${game.gameId} | ${game.sport} | ${game.location} | ${game.startTime}`);
-    lines.push(`Final simulated result: ${game.finalSimulatedResult} | Baseline: ${game.baselineVerdict.toUpperCase()}`);
+    lines.push(`Final synthesized result: ${game.finalSimulatedResult} | Synthesis: ${game.synthesisVerdict.toUpperCase()} | State: ${game.synthesisState}`);
+    lines.push(`Protocol: ${game.protocolVersion} | Mapping: ${game.mappingVersion} | Legacy baseline: ${game.baselineVerdict.toUpperCase()}`);
     lines.push(`Total hits: ${game.totalHits}/${game.totalEvaluations} (${game.totalHitPercentage}% of all evaluations)`);
     lines.push(`Missed: ${game.totalMisses} | Not evaluable: ${game.totalNotEvaluable} | Evaluable hit rate: ${game.evaluableHitPercentage}%`);
     lines.push(`God View hits: ${game.godView.hits}/${game.godView.total} (${game.godView.evaluableHitRate}% of evaluable methods) | Missed: ${game.godView.misses} | Not evaluable: ${game.godView.notEvaluable}`);

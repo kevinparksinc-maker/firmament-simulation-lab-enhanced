@@ -32,6 +32,17 @@ describe("dual-frame house systems", () => {
     expect(result.agent.foundation.layers).toHaveLength(result.god.foundation.layers.length);
   });
 
+  it("synthesizes God activation into Agent manifestation instead of treating frames as competing calls", () => {
+    const result = runFullPackageDualFrameChallenger(event);
+
+    expect(result.synthesis.protocolVersion).toBe("FIRMAMENT_PROTOCOL_V1");
+    expect(result.synthesis.mappingVersion).toBe("FAVORITE_TO_ASC_V1");
+    expect(result.synthesis.activatedField.source).toBe("God View");
+    expect(result.synthesis.localManifestation.source).toBe("Agent View");
+    expect(result.synthesis.formula).toContain("local conversion channel");
+    expect(["convergent", "counterforce", "suppressed", "volatile"]).toContain(result.synthesis.translation.state);
+  });
+
   it("supports explicit 180-degree AgentView experiments without changing God View", () => {
     const baseline = runFullPackageDualFrameChallenger(event);
     const ascendantOnly = runFullPackageDualFrameChallenger(event, { agentViewRotation: "ascendant-only" });

@@ -99,8 +99,34 @@ export type FullPackageDualFrameChallenger = {
   recoveredArchiveLayers: readonly string[];
   god: FullPackageFrame;
   agent: FullPackageFrame;
+  synthesis: GodToAgentSynthesis;
   agreement: { state: "agree" | "split" | "no-call"; winner: Winner };
   boundary: string;
+};
+
+export type GodToAgentSynthesis = {
+  protocolVersion: "FIRMAMENT_PROTOCOL_V1";
+  mappingVersion: "FAVORITE_TO_ASC_V1";
+  primaryTestimony: "HORARY_V1";
+  lowerOrderLayers: readonly ["FIXED_STARS_V1", "MANZILS_V1", "NAKSHATRAS_V1", "DECANS_V1"];
+  activatedField: { source: "God View"; winner: Winner; scoreA: number; scoreB: number; differential: number; interpretation: string };
+  localManifestation: { source: "Agent View"; winner: Winner; scoreA: number; scoreB: number; differential: number; interpretation: string };
+  translation: {
+    state: "convergent" | "counterforce" | "suppressed" | "volatile";
+    explanation: string;
+    conversionRatio: number | null;
+    counterforce: number;
+    suppression: number;
+    volatility: number;
+    structuralConvergence: number;
+  };
+  territorialAssignment: { sideA: "Ascendant / favored"; sideB: "Descendant / underdog" };
+  scoreA: number;
+  scoreB: number;
+  margin: number;
+  winner: Winner;
+  noCall: boolean;
+  formula: string;
 };
 
 type FramePlanet = TerritorialPlanet & { longitude: number };
@@ -433,6 +459,51 @@ function buildFrame(
   };
 }
 
+function buildGodToAgentSynthesis(god: FullPackageFrame, agent: FullPackageFrame): GodToAgentSynthesis {
+  const activationDifferential = round(god.synthesis.scoreA - god.synthesis.scoreB);
+  const manifestationDifferential = round(agent.synthesis.scoreA - agent.synthesis.scoreB);
+  const sameDirection = activationDifferential !== 0 && manifestationDifferential !== 0 && Math.sign(activationDifferential) === Math.sign(manifestationDifferential);
+  const counterforce = sameDirection ? 0 : round(Math.min(Math.abs(activationDifferential), Math.abs(manifestationDifferential)));
+  const suppression = sameDirection ? round(Math.max(0, Math.abs(activationDifferential) - Math.abs(manifestationDifferential))) : 0;
+  const volatility = round(Math.abs(activationDifferential - manifestationDifferential));
+  const structuralConvergence = round(Math.max(0, 1 - volatility / (Math.abs(activationDifferential) + Math.abs(manifestationDifferential) + 1)));
+  const conversionRatio = activationDifferential === 0 ? null : round(manifestationDifferential / activationDifferential);
+  const state = !sameDirection
+    ? activationDifferential === 0 || manifestationDifferential === 0 ? "suppressed" : "counterforce"
+    : suppression > Math.abs(activationDifferential) * 0.5 ? "suppressed"
+      : volatility > Math.max(3, Math.abs(activationDifferential) * 0.75) ? "volatile"
+        : "convergent";
+  const scoreA = round((god.synthesis.scoreA + agent.synthesis.scoreA) / 2);
+  const scoreB = round((god.synthesis.scoreB + agent.synthesis.scoreB) / 2);
+  const margin = round(Math.abs(scoreA - scoreB));
+  const winner = margin < 1.5 ? "TIE" : layerWinner(scoreA, scoreB);
+  const activatedLabel = god.synthesis.winner === "A" ? "Side A / Ascendant" : god.synthesis.winner === "B" ? "Side B / Descendant" : "a neutral field";
+  const manifestationLabel = agent.synthesis.winner === "A" ? "Side A / Ascendant" : agent.synthesis.winner === "B" ? "Side B / Descendant" : "a neutral local channel";
+  const explanation = state === "convergent"
+    ? `God View activates ${activatedLabel}; Agent View converts that field into ${manifestationLabel}. The two layers reinforce one another.`
+    : state === "counterforce"
+      ? `God View activates ${activatedLabel}, while Agent View localizes ${manifestationLabel}. The local channel supplies counterforce rather than a second competing prediction.`
+      : state === "suppressed"
+        ? `God View activates ${activatedLabel}, but the Agent View channel weakens or contains that field. The signal is present but suppressed in local manifestation.`
+        : `God View activates ${activatedLabel}, while the Agent View channel changes its intensity materially. Treat the conversion as volatile rather than forcing agreement.`;
+  return {
+    protocolVersion: "FIRMAMENT_PROTOCOL_V1",
+    mappingVersion: "FAVORITE_TO_ASC_V1",
+    primaryTestimony: "HORARY_V1",
+    lowerOrderLayers: ["FIXED_STARS_V1", "MANZILS_V1", "NAKSHATRAS_V1", "DECANS_V1"],
+    activatedField: { source: "God View", winner: god.synthesis.winner, scoreA: god.synthesis.scoreA, scoreB: god.synthesis.scoreB, differential: activationDifferential, interpretation: `Fixed-background activation favors ${activatedLabel}.` },
+    localManifestation: { source: "Agent View", winner: agent.synthesis.winner, scoreA: agent.synthesis.scoreA, scoreB: agent.synthesis.scoreB, differential: manifestationDifferential, interpretation: `Event-local translation manifests through ${manifestationLabel}.` },
+    translation: { state, explanation, conversionRatio, counterforce, suppression, volatility, structuralConvergence },
+    territorialAssignment: { sideA: "Ascendant / favored", sideB: "Descendant / underdog" },
+    scoreA,
+    scoreB,
+    margin,
+    winner,
+    noCall: winner === "TIE",
+    formula: "Synthesis = average(God activation, Agent manifestation); God View is the activated field, Agent View is the local conversion channel, and frame disagreement is retained as counterforce—not treated as a second prediction.",
+  };
+}
+
 /**
  * Sandbox-only expansion. It deliberately keeps the permanent fixed-house and
  * moving-Ascendant frames separate and does not write validation rows or alter
@@ -449,6 +520,7 @@ export function runFullPackageDualFrameChallenger(input: GameInput, options: Dua
     : god.synthesis.winner === agent.synthesis.winner
       ? { state: "agree" as const, winner: god.synthesis.winner }
       : { state: "split" as const, winner: "TIE" as const };
+  const synthesis = buildGodToAgentSynthesis(god, agent);
   return {
     status: "experimental-read-only",
     method: "sandbox-current-foundation-plus-recovered-extensions-v1",
@@ -456,6 +528,7 @@ export function runFullPackageDualFrameChallenger(input: GameInput, options: Dua
     recoveredArchiveLayers: FULL_PACKAGE_ADDED_LAYERS,
     god,
     agent,
+    synthesis,
     agreement,
     boundary: `Sandbox-only current-foundation-plus-archive-extensions challenger (${rotationMode} AgentView rotation). It combines the current seven-layer Territorial foundation and full KP chain with recovered archive additions under each frame’s own house rule. The recovered master source uses a distinct canonical territorial foundation, so this is not an exact master-engine replay. No live winner, live weight, validation model version, frozen run, or outcome is changed. It is not claimed to be the missing Tyson–Douglas or 70–78% method.`,
   };
