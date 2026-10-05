@@ -26,6 +26,27 @@ describe("simulation adapter", () => {
     expect(result.agentView.name).toBe("Agent’s View");
     expect(result.godView.allLayers.length).toBeGreaterThan(0);
     expect(result.agentView.allLayers.length).toBeGreaterThan(0);
+    expect(result.evaluationFramework.sideA).toContain("favored");
+    expect(result.evaluationFramework.sideB).toContain("underdog");
+    expect(result.evaluationFramework.primaryResearchEligible).toBe(false);
+  });
+
+  it("maps an explicit market favorite to Side A even when it is the away team", () => {
+    const result = runSimulationEvent({
+      ...fixture,
+      teamA: "Home Team",
+      teamB: "Away Team",
+      favoredTeam: "Away Team",
+      underdogTeam: "Home Team",
+      homeTeam: "Home Team",
+      awayTeam: "Away Team",
+      roleAssignmentSource: "market-odds",
+    });
+
+    expect(result.input.teamA).toBe("Away Team");
+    expect(result.input.teamB).toBe("Home Team");
+    expect(result.evaluationFramework.roleAssignmentSource).toBe("market-odds");
+    expect(result.evaluationFramework.primaryResearchEligible).toBe(true);
   });
 
   it("labels each layer against the verified historical winner", () => {

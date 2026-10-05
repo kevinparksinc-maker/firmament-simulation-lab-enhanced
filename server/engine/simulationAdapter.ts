@@ -13,6 +13,11 @@ export type SimulationEventInput = {
   id?: string;
   teamA: string;
   teamB: string;
+  favoredTeam?: string;
+  underdogTeam?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  roleAssignmentSource?: "market-odds" | "expert-consensus" | "manual" | "legacy-side-order";
   sport: GameInput["gameType"];
   location: string;
   latitude?: number;
@@ -233,9 +238,12 @@ function frameReport(
 export function runSimulationEvent(input: SimulationEventInput) {
   const startTime = new Date(input.startTime);
   if (Number.isNaN(startTime.getTime())) throw new Error("startTime must be a valid ISO date");
+  const favoredTeam = input.favoredTeam ?? input.teamA;
+  const underdogTeam = input.underdogTeam ?? input.teamB;
+  const roleAssignmentSource = input.roleAssignmentSource ?? (input.favoredTeam && input.underdogTeam ? "manual" : "legacy-side-order");
   const gameInput: GameInput = {
-    teamA: input.teamA,
-    teamB: input.teamB,
+    teamA: favoredTeam,
+    teamB: underdogTeam,
     gameType: input.sport,
     location: input.location,
     startTime,
@@ -255,8 +263,16 @@ export function runSimulationEvent(input: SimulationEventInput) {
   const baselineVerdict = verdictFor(baselineWinner, actualWinner);
 
   return {
-    id: input.id ?? `${input.teamA}-${input.teamB}-${input.startTime}`,
-    input: { ...input, startTime: startTime.toISOString() },
+    id: input.id ?? `${favoredTeam}-${underdogTeam}-${input.startTime}`,
+    input: { ...input, teamA: favoredTeam, teamB: underdogTeam, favoredTeam, underdogTeam, roleAssignmentSource, startTime: startTime.toISOString() },
+    evaluationFramework: {
+      sideA: "Ascendant / favored to win",
+      sideB: "Descendant / underdog",
+      actualWinnerMeaning: "A means favored won; B means underdog won; TIE means no decisive result.",
+      homeAwayIsMetadataOnly: true,
+      roleAssignmentSource,
+      primaryResearchEligible: roleAssignmentSource !== "legacy-side-order",
+    },
     engine: {
       source: "firmament-engine",
       calculationPath: "generateFixedJ2000KPPrediction + runFullPackageDualFrameChallenger",

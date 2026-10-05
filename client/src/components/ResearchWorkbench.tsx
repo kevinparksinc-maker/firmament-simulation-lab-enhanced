@@ -17,6 +17,11 @@ export type FixtureInput = {
   id?: string;
   teamA: string;
   teamB: string;
+  favoredTeam?: string;
+  underdogTeam?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  roleAssignmentSource?: "market-odds" | "expert-consensus" | "manual" | "legacy-side-order";
   sport: Sport;
   location: string;
   latitude?: number;
