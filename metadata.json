@@ -1,0 +1,6 @@
+{
+  "name": "Firmament Lab",
+  "description": "Sports market monitor and astrological simulation lab comparing God View and AgentView frames",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

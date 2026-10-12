@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.FirmamentLab" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#07101d</item>
+        <item name="android:statusBarColor">#07101d</item>
+        <item name="android:navigationBarColor">#07101d</item>
+    </style>
+</resources>
