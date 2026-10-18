@@ -134,7 +134,7 @@ fun DashboardScreen(
                     ) {
                         Column {
                             Text(text = "MARKET FAVORITE LOOKUP", color = PrimaryCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                            Text(text = "Scheduled games & odds feed", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Verified game schedule", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         }
                         Surface(color = SuccessGreen.copy(alpha = 0.15f), shape = RoundedCornerShape(99.dp)) {
                             Text(text = "${scheduledGames.size} games", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = SuccessGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -160,7 +160,7 @@ fun DashboardScreen(
 
                     // Games list
                     if (scheduledGames.isEmpty()) {
-                        Text(text = "No games scheduled for this filter.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 16.dp))
+                        Text(text = "Schedule unavailable: no verified live schedule provider is connected. No matchups will be invented.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 16.dp))
                     } else {
                         scheduledGames.filter { selectedSport == "ALL" || it.sport.equals(selectedSport, ignoreCase = true) }.forEach { game ->
                             GameRow(game = game, onRun = {
