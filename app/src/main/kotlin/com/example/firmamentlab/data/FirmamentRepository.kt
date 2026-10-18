@@ -2,79 +2,13 @@ package com.example.firmamentlab.data
 
 class FirmamentRepository {
 
+    /**
+     * Never fabricate a schedule by applying the selected date to example fixtures.
+     * Until a validated schedule provider is connected, return no games rather
+     * than misrepresenting mock matchups and odds as official live data.
+     */
     fun getScheduledGames(date: String, sport: String): List<ScheduledGame> {
-        val allGames = listOf(
-            ScheduledGame(
-                id = "mlb-2024-001",
-                sport = "MLB",
-                teamA = "New York Yankees",
-                teamB = "Houston Astros",
-                favoriteTeam = "New York Yankees",
-                underdogTeam = "Houston Astros",
-                location = "Houston, TX",
-                venue = "Minute Maid Park",
-                startTime = "${date}T23:10:00Z",
-                homeMoneyline = "+115",
-                awayMoneyline = "-135",
-                oddsProvider = "DraftKings",
-                status = "Scheduled",
-                oddsUpdatedAt = "10 mins ago",
-                source = "Official League Schedule & Odds Feed"
-            ),
-            ScheduledGame(
-                id = "mlb-2024-002",
-                sport = "MLB",
-                teamA = "Boston Red Sox",
-                teamB = "Los Angeles Dodgers",
-                favoriteTeam = "Los Angeles Dodgers",
-                underdogTeam = "Boston Red Sox",
-                location = "Los Angeles, CA",
-                venue = "Dodger Stadium",
-                startTime = "${date}T01:10:00Z",
-                homeMoneyline = "-160",
-                awayMoneyline = "+140",
-                oddsProvider = "FanDuel",
-                status = "Scheduled",
-                oddsUpdatedAt = "5 mins ago",
-                source = "Official League Schedule & Odds Feed"
-            ),
-            ScheduledGame(
-                id = "nba-2024-001",
-                sport = "NBA",
-                teamA = "Golden State Warriors",
-                teamB = "Boston Celtics",
-                favoriteTeam = "Boston Celtics",
-                underdogTeam = "Golden State Warriors",
-                location = "Boston, MA",
-                venue = "TD Garden",
-                startTime = "${date}T00:30:00Z",
-                homeMoneyline = "-185",
-                awayMoneyline = "+155",
-                oddsProvider = "BetMGM",
-                status = "Scheduled",
-                oddsUpdatedAt = "12 mins ago",
-                source = "Official League Schedule & Odds Feed"
-            ),
-            ScheduledGame(
-                id = "nfl-2024-001",
-                sport = "NFL",
-                teamA = "Kansas City Chiefs",
-                teamB = "San Francisco 49ers",
-                favoriteTeam = "Kansas City Chiefs",
-                underdogTeam = "San Francisco 49ers",
-                location = "Las Vegas, NV",
-                venue = "Allegiant Stadium",
-                startTime = "${date}T22:30:00Z",
-                homeMoneyline = "-120",
-                awayMoneyline = "+100",
-                oddsProvider = "Caesars",
-                status = "Scheduled",
-                oddsUpdatedAt = "1 hour ago",
-                source = "Official League Schedule & Odds Feed"
-            )
-        )
-
-        return if (sport == "ALL") allGames else allGames.filter { it.sport.equals(sport, ignoreCase = true) }
+        return emptyList()
     }
 
     fun simulateFixture(teamA: String, teamB: String, sport: String, location: String, startTime: String, agentViewModel: String): SimulationResult {
